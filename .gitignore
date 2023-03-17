@@ -40,9 +40,11 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-/uploads
+uploads
+easy-rsa
 
 # RSA
 .rsa
 # Environment 
 .env
+

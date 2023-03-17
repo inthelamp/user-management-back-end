@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 /**
- * CA countries
+ * VarsFile countries
  * @enum {string}
  */
 const Countries = {
@@ -12,7 +12,7 @@ const Countries = {
 };
 
 /**
- * CA algorithms
+ * VarsFile algorithms
  * @enum {string}
  */
 const Algorithms = {
@@ -21,7 +21,7 @@ const Algorithms = {
 };
 
 /**
- * CA curves
+ * VarsFile curves
  * @enum {string}
  */
 const Curves = {
@@ -110,7 +110,7 @@ const Curves = {
 };
 
 /**
- * CA digests
+ * VarsFile digests
  * @enum {string}
  */
 const Digests = {
@@ -123,13 +123,13 @@ const Digests = {
 };
 
 // Review schema
-const certificateAuthoritySchema = new Schema(
+const varsFileSchema = new Schema(
   {
     id: { type: String, unique: true, required: true },
     userId: { type: String, index: true, required: true },
     country: {
       type: String,
-      default: Countries.CA,
+      default: Countries.VarsFile,
       enum: Countries,
       required: true
     }, 
@@ -137,7 +137,8 @@ const certificateAuthoritySchema = new Schema(
     city: { type: String, required: true }, 
     organization: { type: String, required: true }, 
     email: { type: String, required: true }, 
-    organizationalUnit: { type: String, required: true }, 
+    organizationalUnit: { type: String, required: true },
+    keySize: { type: Number, default: 2048 },
     algorithm: {
       type: String,
       default: Algorithms.rsa,
@@ -156,15 +157,15 @@ const certificateAuthoritySchema = new Schema(
       enum: Digests,
       required: true
     },
-    expire: { type: Number, default: 3650 },
-    renew: { type: Number, default: 30 },
-    days: { type: Number, default: 180 },
-    commonName: { type: String, required: true }, 
-    batch: { type: String,  default: undefined },
+    caExpire: { type: Number, default: 3650 },
+    certExpire: { type: Number, default: 1080 },
+    certRenewDays: { type: Number, default: 30 },
+    crlDays: { type: Number, default: 180 },
+    commonName: { type: String, unique: true, required: true }, 
   },
   { timestamps: true }
 );
 
-const Model = mongoose.model("certificateAuthority", certificateAuthoritySchema);
+const Model = mongoose.model("varsFile", varsFileSchema);
 
 module.exports = { Countries, Digests, Algorithms, Curves, Model };

@@ -1,7 +1,7 @@
 const Joi = require("joi");
 const { v4: uuid } = require("uuid");
-const { execProcess }  = require("./shared");
-const CertificateAuthority  = require("../models/certificateAuthority");
+const { setupCertificate }  = require("./shared");
+const CertificateAuthority  = require("../models/varsFile");
 
 require("dotenv").config();
 
@@ -14,6 +14,7 @@ const certificateAuthoritySchema = Joi.object({
   organization: Joi.string().required(), 
   email: Joi.string().required(), 
   organizationalUnit: Joi.string().required(), 
+  keySize: Joi.number(),
   algorithm: Joi.string().valid("rsa", "ec").required(),
   curve: Joi.string().valid("secp112r1", "secp112r2", "secp128r1", "secp128r2", "secp160k1", "secp160r1", "secp160r2", "secp192k1", "secp224k1",
                             "secp224r1", "secp256k1", "secp384r1", "secp521r1", "prime192v1", "prime192v2", "prime192v3", "prime239v1", "prime239v2",
@@ -27,11 +28,11 @@ const certificateAuthoritySchema = Joi.object({
                             "brainpoolP224r1", "brainpoolP224t1", "brainpoolP256r1", "brainpoolP256t1", "brainpoolP320r1", "brainpoolP320t1", "brainpoolP384r1",
                             "brainpoolP384t1", "brainpoolP512r1", "brainpoolP512t1", "SM2").required(),
   digest: Joi.string().valid("md5", "sha1", "sha256", "sha224", "sha384", "sha512").required(),
-  expire: Joi.number(),
-  renew: Joi.number(),
-  days: Joi.number(),
-  commonName: Joi.string().required(), 
-  batch: Joi.string().allow(''),
+  caExpire: Joi.number(),
+  certExpire: Joi.number(),
+  certRenewDays: Joi.number(),
+  crlDays: Joi.number(),
+  commonName: Joi.string().required(),
 });
 
 const deleteFile = (file) => {
@@ -51,32 +52,32 @@ const deleteFile = (file) => {
   }
 }
 
-
 /**
- * Create Certificate Authority
+ * Setup Certificate Authority environment
  * @returns {json} retrun a JSON object
  */
-module.exports.Create = async (req, res) => {
+module.exports.Setup = async (req, res) => {
   try {
 
     // Getting review form data
-    const caFormData = req.body;
-    caFormData.country = req.body.country;
-    caFormData.province =  req.body.province;
-    caFormData.city = req.body.city;
-    caFormData.organization = req.body.organization;
-    caFormData.email = req.body.email;
-    caFormData.organizationalUnit = req.body.organizationalUnit;
-    caFormData.algorithm = req.body.algorithm;
-    caFormData.curve = req.body.curve;
-    caFormData.digest = req.body.digest;
-    caFormData.expire = req.body.expire;
-    caFormData.renew = req.body.renew;
-    caFormData.days = req.body.days;
-    caFormData.commonName = req.body.commonName;
-    caFormData.batch = req.body.batch ? req.body.batch : "";
+    const varsFormData = req.body;
+    varsFormData.country = req.body.country;
+    varsFormData.province =  req.body.province;
+    varsFormData.city = req.body.city;
+    varsFormData.organization = req.body.organization;
+    varsFormData.email = req.body.email;
+    varsFormData.organizationalUnit = req.body.organizationalUnit;
+    varsFormData.keySize = req.body.keySize;
+    varsFormData.algorithm = req.body.algorithm;
+    varsFormData.curve = req.body.curve;
+    varsFormData.digest = req.body.digest;
+    varsFormData.caExpire = req.body.caExpire;
+    varsFormData.certExpire = req.body.certExpire;
+    varsFormData.certRenewDays = req.body.certRenewDays;
+    varsFormData.crlDays = req.body.crlDays;
+    varsFormData.commonName = req.body.commonName;
 
-    const result = certificateAuthoritySchema.validate(caFormData);
+    const result = certificateAuthoritySchema.validate(varsFormData);
     if (result.error) {
         console.log(result.error.message);
         return res.json({
@@ -86,13 +87,96 @@ module.exports.Create = async (req, res) => {
         });
     }
 
-    // excute easy-rsa to create the certificate authority
-    const path = require('path');
-    const fs = require('fs'); 
-    const cmd = path.resolve(process.env.EASYRSA_CMD_PATH) + '   '; 
+    // setup easy-rsa files and directories
+    setupCertificate(result.value);
 
-    const execResult = await execProcess(cmd);
-    console.log(execResult);
+    const userid = req.decoded.userid; // Passed by verifyJwt, a middleware 
+    const id = uuid(); // Generating unique id for the certificateAuthority.
+    result.value.id = id; 
+    result.value.userId = userid; 
+
+    // Retriving a certificateAuthority based on certificateAuthority id and userid
+    var certificateAuthority = await CertificateAuthority.Model.findOne({ id: id, userId : userid });
+
+    if (certificateAuthority) {
+      // Updating certificate Authority 
+      certificateAuthority.country = result.value.country;
+      certificateAuthority.province =  result.value.province;
+      certificateAuthority.city = result.value.city;
+      certificateAuthority.organization = result.value.organization;
+      certificateAuthority.email = result.value.email;
+      certificateAuthority.organizationalUnit = result.value.organizationalUnit;
+      certificateAuthority.keySize = result.value.keySize;
+      certificateAuthority.algorithm = result.value.algorithm;
+      certificateAuthority.curve = result.value.curve;
+      certificateAuthority.digest = result.value.digest;
+      certificateAuthority.caExpire = result.value.caExpire;
+      certificateAuthority.certExpire = result.value.certExpire;
+      certificateAuthority.certRenewDays = result.value.certRenewDays;
+      certificateAuthority.crlDays = result.value.crlDays;
+      certificateAuthority.commonName = result.value.commonName;
+    } else {
+      certificateAuthority = new CertificateAuthority.Model(result.value);
+    }
+
+    // Saving into DB
+    await certificateAuthority.save();     
+
+    return res.status(200).json({
+      success: true,
+      id: id,
+      message: "Certificate authority environment is successfully set up",
+    });
+  } catch (error) {
+    console.error("Certificate authority environment setup error", error);
+
+    return res.status(500).json({
+      error: true,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Create Certificate Authority
+ * @returns {json} retrun a JSON object
+ */
+module.exports.Create = async (req, res) => {
+  try {
+
+    // Getting review form data
+    const varsFormData = req.body;
+    varsFormData.country = req.body.country;
+    varsFormData.province =  req.body.province;
+    varsFormData.city = req.body.city;
+    varsFormData.organization = req.body.organization;
+    varsFormData.email = req.body.email;
+    varsFormData.organizationalUnit = req.body.organizationalUnit;
+    varsFormData.keySize = req.body.keySize;
+    varsFormData.algorithm = req.body.algorithm;
+    varsFormData.curve = req.body.curve;
+    varsFormData.digest = req.body.digest;
+    varsFormData.caExpire = req.body.caExpire;
+    varsFormData.certExpire = req.body.certExpire;
+    varsFormData.certRenewDays = req.body.certRenewDays;
+    varsFormData.crlDays = req.body.crlDays;
+    varsFormData.commonName = req.body.commonName;
+
+    const result = certificateAuthoritySchema.validate(varsFormData);
+    if (result.error) {
+        console.log(result.error.message);
+        return res.json({
+            error: true,
+            status: 400,
+            message: result.error.message,
+        });
+    }
+
+    // setup easy-rsa directories
+    setupCertificate(result.value);
+
+    // excute easy-rsa to create the certificate authority
+
 
     const userid = req.decoded.userid; // Passed by verifyJwt, a middleware 
     const id = uuid(); // Generating unique id for the certificateAuthority.

@@ -35,7 +35,8 @@ var morgan = require('morgan');
 app.use(morgan('combined'));
 
 app.use("/users", require("./app/routes/users"));
-app.use("/certificateAuthorities", require("./app/routes/certificateAuthorities"));
+app.use("/varsFiles", require("./app/routes/varsFiles"));
+app.use("/certificates", require("./app/routes/certificates"));
 
 app.listen(port, () => {
   console.log("Server started listening on PORT : " + port);

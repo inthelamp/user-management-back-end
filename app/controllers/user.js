@@ -8,7 +8,7 @@ const User  = require("../models/user");
 // Validating user data from client
 const userSchema = Joi.object({
   email: Joi.string().email({ minDomainSegments: 2 }).required(),
-  username: Joi.string().required().min(3),
+  name: Joi.string().required().min(3),
   password: Joi.string().required().min(8),
   confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
   birthday: Joi.date().iso(),
@@ -69,7 +69,7 @@ module.exports.Signup = async (req, res) => {
     result.value.role = User.Roles.USER;
 
     // Generating a token based on user information
-    const { error, token } = await generateJwt(result.value.id, result.value.username, result.value.role);
+    const { error, token } = await generateJwt(result.value.id, result.value.name, result.value.role);
 
     if (error) {
       return res.status(500).json({
@@ -89,7 +89,7 @@ module.exports.Signup = async (req, res) => {
       message: "Sign-up is successfully completed.",
       user: {
         id: newUser.id,
-        username: newUser.username,
+        name: newUser.name,
         role: newUser.role,
         status: newUser.status,
         access_token: newUser.accessToken,
@@ -152,7 +152,7 @@ module.exports.Signin = async (req, res) => {
     }
 
     // Generating a token based on user information
-    const { error, token } = await generateJwt(user.id, user.username, user.role);
+    const { error, token } = await generateJwt(user.id, user.name, user.role);
 
     if (error) {
       return res.status(500).json({
@@ -175,7 +175,7 @@ module.exports.Signin = async (req, res) => {
       message: "User is signed in successfully.",
       user: {
         id: user.id,
-        username: user.username,
+        name: user.name,
         role: user.role,
         status: user.status,
         access_token: user.accessToken,

@@ -29,7 +29,7 @@ const userSchema = new Schema(
   { 
     id: { type: String, unique: true, required: true },
     email: { type: String,  unique: true, required: true },
-    username: { type: String },
+    name: { type: String },
     birthday: { type: Date },
     status: {
       type: String,
