@@ -1,18 +1,10 @@
 const mongoose = require("mongoose");
-
 const Schema = mongoose.Schema;
 
-/**
- * VarsFile countries
- * @enum {string}
- */
-const Countries = {
-    CA: "CA",
-    US: "US"
-};
+const { Countries, issuerSchema } = require("../models/issuer");
 
 /**
- * VarsFile algorithms
+ * Vars file algorithms
  * @enum {string}
  */
 const Algorithms = {
@@ -21,7 +13,7 @@ const Algorithms = {
 };
 
 /**
- * VarsFile curves
+ * Vars file curves
  * @enum {string}
  */
 const Curves = {
@@ -110,7 +102,7 @@ const Curves = {
 };
 
 /**
- * VarsFile digests
+ * Vars file digests
  * @enum {string}
  */
 const Digests = {
@@ -122,22 +114,12 @@ const Digests = {
   sha512: "sha512"
 };
 
-// Review schema
+// Vars file schema
 const varsFileSchema = new Schema(
   {
     id: { type: String, unique: true, required: true },
     userId: { type: String, index: true, required: true },
-    country: {
-      type: String,
-      default: Countries.VarsFile,
-      enum: Countries,
-      required: true
-    }, 
-    province: { type: String, required: true }, 
-    city: { type: String, required: true }, 
-    organization: { type: String, required: true }, 
-    email: { type: String, required: true }, 
-    organizationalUnit: { type: String, required: true },
+    issuer: { type: issuerSchema, required: true },
     keySize: { type: Number, default: 2048 },
     algorithm: {
       type: String,
@@ -161,11 +143,10 @@ const varsFileSchema = new Schema(
     certExpire: { type: Number, default: 1080 },
     certRenewDays: { type: Number, default: 30 },
     crlDays: { type: Number, default: 180 },
-    commonName: { type: String, unique: true, required: true }, 
   },
   { timestamps: true }
 );
 
 const Model = mongoose.model("varsFile", varsFileSchema);
 
-module.exports = { Countries, Digests, Algorithms, Curves, Model };
+module.exports = { Digests, Algorithms, Curves, Model };

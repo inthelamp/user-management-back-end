@@ -141,7 +141,7 @@ module.exports.Setup = async (req, res) => {
  * Create Certificate Authority
  * @returns {json} retrun a JSON object
  */
-module.exports.Create = async (req, res) => {
+module.exports.CreateCA = async (req, res) => {
   try {
 
     // Getting review form data
@@ -205,7 +205,7 @@ module.exports.Create = async (req, res) => {
  * Updating certificateAuthority
  * @returns {json} retrun a JSON object
  */
-module.exports.Update = async (req, res) => {
+module.exports.UpdateCA = async (req, res) => {
   try {
     // Getting certificateAuthority form data
     const certificateAuthorityFormData = req.body;
@@ -469,7 +469,7 @@ module.exports.Update = async (req, res) => {
  * Delete a certificateAuthority posted by the user
  * @returns {json} retrun a JSON object
  */
- module.exports.Delete = async (req, res) => {
+ module.exports.DeleteCA = async (req, res) => {
   try {    
     const { userid } = req.decoded; // Passed by verifyJwt, a middleware 
     const id = req.headers.id;

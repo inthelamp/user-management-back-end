@@ -13,7 +13,6 @@ const Statuses = {
 	SUSPENDED: "Suspended"
 };
 
-
 /**
  * User roles
  * @enum {string}

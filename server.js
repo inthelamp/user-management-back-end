@@ -35,6 +35,7 @@ var morgan = require('morgan');
 app.use(morgan('combined'));
 
 app.use("/users", require("./app/routes/users"));
+app.use("/issuers", require("./app/routes/issuers"));
 app.use("/varsFiles", require("./app/routes/varsFiles"));
 app.use("/certificates", require("./app/routes/certificates"));
 

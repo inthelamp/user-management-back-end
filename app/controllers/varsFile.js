@@ -1,19 +1,25 @@
 const Joi = require("joi");
 const { v4: uuid } = require("uuid");
-const { setupVars, writeToVarsFile, deleteVars }  = require("./shared");
+const { setupEasyRSA, writeToVarsFile, deleteEasyRSASetup }  = require("./shared");
 const VarsFile  = require("../models/varsFile");
 
 require("dotenv").config();
 
-// Validating varsFile data from client
-const varsFileSchema = Joi.object({
-  id: Joi.string(),
+// Validating review data from client
+const issuerSchema = Joi.object({
   country: Joi.string().valid('CA', 'US').required(),
   province: Joi.string().required(), 
   city: Joi.string().required(), 
   organization: Joi.string().required(), 
   email: Joi.string().required(), 
   organizationalUnit: Joi.string().required(), 
+  commonName: Joi.string().required(),
+});
+
+// Validating varsFile data from client
+const varsFileSchema = Joi.object({
+  id: Joi.string(),
+  issuer: issuerSchema.required(),
   keySize: Joi.number(),
   algorithm: Joi.string().valid("rsa", "ec").required(),
   curve: Joi.string().valid("secp112r1", "secp112r2", "secp128r1", "secp128r2", "secp160k1", "secp160r1", "secp160r2", "secp192k1", "secp224k1",
@@ -32,42 +38,7 @@ const varsFileSchema = Joi.object({
   certExpire: Joi.number(),
   certRenewDays: Joi.number(),
   crlDays: Joi.number(),
-  commonName: Joi.string().required(),
 });
-
-/**
- * Getting all issuers
- * @returns {json} retrun a JSON object
- */
-module.exports.Issuers = async (req, res) => {
-  try {
-    const { userid } = req.decoded; // Passed by verifyJwt, a middleware 
-
-    // Retriving all reviews based on userid
-    let issuers = await VarsFile.Model.find({ userId: userid }, { id: 1, country: 1, province: 1, city: 1, organization: 1, organizationalUnit: 1, commonName: 1, email: 1, _id: 0 });
-
-    if (!issuers) {
-      return res.status(400).json({
-        error: true,
-        message: 'No vars settings file records are found',
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      issuers: issuers,
-      message: "All issuers from vars settings are successfully retrieved.",
-    });
-  } catch (error) {
-    console.error("Error occurs in retrieving issuers from vars settings ", error);
-
-    return res.status(500).json({
-      error: true,
-      message: error.message,
-    });
-  }
-};
-
 
 /**
  * Getting all vars settings files
@@ -78,7 +49,7 @@ module.exports.VarsFiles = async (req, res) => {
     const { userid } = req.decoded; // Passed by verifyJwt, a middleware 
 
     // Retriving all reviews based on userid
-    let varsFiles = await VarsFile.Model.find({ userId: userid }, { id: 1, country: 1, province: 1, city: 1, organization: 1, organizationalUnit: 1, commonName: 1, email: 1, _id: 0 });
+    let varsFiles = await VarsFile.Model.find({ userId: userid }, { id: 1, issuer: 1, _id: 0 });
 
     if (!varsFiles) {
       return res.status(400).json({
@@ -108,7 +79,39 @@ module.exports.VarsFiles = async (req, res) => {
  */
 module.exports.Create = async (req, res) => {
   try {
-    const result = varsFileSchema.validate(req.body);
+    const issuer = {
+      country: req.body.country,
+      province: req.body.province, 
+      city: req.body.city, 
+      organization: req.body.organization, 
+      email: req.body.email, 
+      organizationalUnit: req.body.organizationalUnit, 
+      commonName: req.body.commonName,
+    }
+
+    // Checking validation of book cover image data
+    const issuerResult = issuerSchema.validate(issuer);               
+    if (issuerResult.error) {
+      console.log(issuerResult.error.message);
+      return res.status(400).json({
+          error: true,
+          message: issuerResult.error.message,
+      });
+    }
+
+    var varsFile = {
+      issuer: issuer,
+      keySize: req.body.keySize,
+      algorithm: req.body.algorithm,
+      curve: req.body.curve,
+      digest: req.body.digest,
+      caExpire: req.body.caExpire,
+      certExpire: req.body.certExpire,
+      certRenewDays: req.body.certRenewDays,
+      crlDays: req.body.crlDays
+    }
+
+    const result = varsFileSchema.validate(varsFile);
     if (result.error) {
         return res.status(400).json({
             error: true,
@@ -117,19 +120,16 @@ module.exports.Create = async (req, res) => {
     }
 
     // Retrieving a vars settings based on cn 
-    var varsFile = await VarsFile.Model.findOne({ commonName: result.value.commonName });
-
+    var varsFile = await VarsFile.Model.findOne({ "issuer.commonName": result.value.issuer.commonName });
     if (varsFile) {
       return res.status(400).json({
         error: true,
-        message: "Vars settings record for " + result.value.commonName + " exists already."
+        message: "Vars settings record for " + result.value.issuer.commonName + " exists already."
       });
     }
 
     // Setting up easy-rsa vars file
-    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + result.value.commonName;  
-    const certificateLogPath = certificateRootPath + '/easyrsa.log';
-    setupVars(result.value, certificateRootPath, certificateLogPath);
+    setupEasyRSA(result.value.issuer);
 
     const userid = req.decoded.userid; // Passed by verifyJwt, a middleware 
     const id = uuid(); // Generating unique id for the varsFile.
@@ -163,7 +163,39 @@ module.exports.Create = async (req, res) => {
  */
 module.exports.Update = async (req, res) => {
   try {
-    const result = varsFileSchema.validate(req.body);
+      const issuer = {
+        country: req.body.country,
+        province: req.body.province, 
+        city: req.body.city, 
+        organization: req.body.organization, 
+        email: req.body.email, 
+        organizationalUnit: req.body.organizationalUnit, 
+        commonName: req.body.commonName,
+      }
+  
+      // Checking validation of book cover image data
+      const issuerResult = issuerSchema.validate(issuer);               
+      if (issuerResult.error) {
+        console.log(issuerResult.error.message);
+        return res.status(400).json({
+            error: true,
+            message: issuerResult.error.message,
+        });
+      }
+  
+      var varsFile = {
+        issuer: issuer,
+        keySize: req.body.keySize,
+        algorithm: req.body.algorithm,
+        curve: req.body.curve,
+        digest: req.body.digest,
+        caExpire: req.body.caExpire,
+        certExpire: req.body.certExpire,
+        certRenewDays: req.body.certRenewDays,
+        crlDays: req.body.crlDays
+      }
+  
+    const result = varsFileSchema.validate(varsFile);
     if (result.error) {
         console.log(result.error.message);
         return res.json({
@@ -174,7 +206,7 @@ module.exports.Update = async (req, res) => {
     }
 
     // updating easy-rsa settings in vars file 
-    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + result.value.commonName;  
+    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + result.value.commonName;  
     const certificateLogPath = certificateRootPath + '/easyrsa.log';
     writeToVarsFile(result.value, certificateRootPath, certificateLogPath);
 
@@ -242,8 +274,8 @@ module.exports.Update = async (req, res) => {
     }
 
     // deleting easy-rsa vars file 
-    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + commonName; 
-    deleteVars(certificateRootPath);
+    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + commonName; 
+    deleteEasyRSASetup(certificateRootPath);
 
     // Retriving a varsFile based on varsFile id and userid
     let varsFile = await VarsFile.Model.findOne({ id: id });
@@ -294,7 +326,7 @@ module.exports.VarsFile = async (req, res) => {
     }
 
     // Retriving a vars file based on id
-    const varsFile = await VarsFile.Model.findOne({ id: id}, {userId: 0, _id: 0, __v: 0, createdAt: 0, updatedAt: 0});
+    var varsFile = await VarsFile.Model.findOne({ id: id}, {userId: 0, _id: 0, __v: 0, createdAt: 0, updatedAt: 0});
     
     if (!varsFile) {
       return res.status(400).json({
@@ -303,6 +335,13 @@ module.exports.VarsFile = async (req, res) => {
       });
     }
 
+    varsFile = { id: varsFile.id, country: varsFile.issuer.country, province: varsFile.issuer.province, city: varsFile.issuer.city, 
+              organization: varsFile.issuer.organization, organizationalUnit: varsFile.issuer.organizationalUnit, email: varsFile.issuer.email, 
+              commonName: varsFile.issuer.commonName, keySize: varsFile.keySize, algorithm: varsFile.algorithm, curve: varsFile.curve, 
+              digest: varsFile.digest, caExpire: varsFile.caExpire, certExpire: varsFile.certExpire, certRenewDays: varsFile.certRenewDays, 
+              crlDays: varsFile.crlDays 
+    };
+    
     return res.status(200).json({
       success: true,
       varsFile,
