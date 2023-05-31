@@ -23,7 +23,7 @@ module.exports.Issuers = async (req, res) => {
     
     issuers = issuers.map( doc => {
       return { id: doc.id, country: doc.issuer.country, province: doc.issuer.province, city: doc.issuer.city, organization: doc.issuer.organization,
-              organizationalUnit: doc.issuer.organizationalUnit, email: doc.issuer.email, commonName: doc.issuer.commonName }
+              organizationalUnit: doc.issuer.organizationalUnit, email: doc.issuer.email, commonName: doc.issuer.commonName, status: doc.issuer.status }
     });
 
     return res.status(200).json({

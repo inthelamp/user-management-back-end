@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const { Countries, issuerSchema } = require("../models/issuer");
+const { issuerSchema } = require("../models/issuer");
+
 
 /**
  * Vars file algorithms
@@ -71,17 +72,17 @@ const Curves = {
     c2tnb359v1: "c2tnb359v1",
     c2pnb368w1: "c2pnb368w1",
     c2tnb431r1: "c2tnb431r1",
-    wap_wsg_idm_ecid_wtls1: "wap-wsg-idm-ecid-wtls1",
-    wap_wsg_idm_ecid_wtls3: "wap-wsg-idm-ecid-wtls3",
-    wap_wsg_idm_ecid_wtls4: "wap-wsg-idm-ecid-wtls4",
-    wap_wsg_idm_ecid_wtls5: "wap-wsg-idm-ecid-wtls5",
-    wap_wsg_idm_ecid_wtls6: "wap-wsg-idm-ecid-wtls6",
-    wap_wsg_idm_ecid_wtls7: "wap-wsg-idm-ecid-wtls7",
-    wap_wsg_idm_ecid_wtls8: "wap-wsg-idm-ecid-wtls8",
-    wap_wsg_idm_ecid_wtls9: "wap-wsg-idm-ecid-wtls9",
-    wap_wsg_idm_ecid_wtls10: "wap-wsg-idm-ecid-wtls10",
-    wap_wsg_idm_ecid_wtls11: "wap-wsg-idm-ecid-wtls11",
-    wap_wsg_idm_ecid_wtls12: "wap-wsg-idm-ecid-wtls12",
+    wap_wsg_idm_ecid_wtls1: "wap_wsg_idm_ecid_wtls1",
+    wap_wsg_idm_ecid_wtls3: "wap_wsg_idm_ecid_wtls3",
+    wap_wsg_idm_ecid_wtls4: "wap_wsg_idm_ecid_wtls4",
+    wap_wsg_idm_ecid_wtls5: "wap_wsg_idm_ecid_wtls5",
+    wap_wsg_idm_ecid_wtls6: "wap_wsg_idm_ecid_wtls6",
+    wap_wsg_idm_ecid_wtls7: "wap_wsg_idm_ecid_wtls7",
+    wap_wsg_idm_ecid_wtls8: "wap_wsg_idm_ecid_wtls8",
+    wap_wsg_idm_ecid_wtls9: "wap_wsg_idm_ecid_wtls9",
+    wap_wsg_idm_ecid_wtls10: "wap_wsg_idm_ecid_wtls10",
+    wap_wsg_idm_ecid_wtls11: "wap_wsg_idm_ecid_wtls11",
+    wap_wsg_idm_ecid_wtls12: "wap_wsg_idm_ecid_wtls12",
     Oakley_EC2N_3: "Oakley-EC2N-3",
     Oakley_EC2N_4: "Oakley-EC2N-4",
     brainpoolP160r1: "brainpoolP160r1",

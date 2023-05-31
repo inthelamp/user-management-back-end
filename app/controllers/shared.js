@@ -59,6 +59,70 @@ const log = ( cmd, fileName, message ) => {
     logStream.end('================================================== END ===============================================\n');
 }
 
+const execCommand = ( certificateLogPath, cmd ) => {
+    try {
+        execResults = execSync(cmd);        
+        log(cmd, certificateLogPath, execResults);
+    } catch (error) {
+        log('', certificateLogPath, error);
+        throw error;
+    }
+}
+
+const initPKI = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa init-pki";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateCA = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa build-ca";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateDH = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa gen-dh";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateServerCertificate = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa build-server-full server nopass";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateTA = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";../src/openvpn --genkey --secret ./pki/ta.key";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateClientCertificate = ( certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa init-pki";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
 const writeToVarsFile = ( varsSettings, certificateRootPath, certificateLogPath ) => {
     const easyrsaVarsFilePath = certificateRootPath + '/vars';
 
@@ -72,17 +136,17 @@ const writeToVarsFile = ( varsSettings, certificateRootPath, certificateLogPath 
         var fd = fs.openSync(easyrsaVarsFilePath, 'w');
         let setVar = 'set_var EASYRSA_DN     "org"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_COUNTRY\t' + '"' + varsSettings.country + '"';
+        setVar = 'set_var EASYRSA_REQ_COUNTRY\t' + '"' + varsSettings.issuer.country + '"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_PROVINCE\t' + '"' + varsSettings.province + '"';
+        setVar = 'set_var EASYRSA_REQ_PROVINCE\t' + '"' + varsSettings.issuer.province + '"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_CITY\t' + '"' + varsSettings.city + '"';
+        setVar = 'set_var EASYRSA_REQ_CITY\t' + '"' + varsSettings.issuer.city + '"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_ORG\t' + '"' + varsSettings.organization + '"';
+        setVar = 'set_var EASYRSA_REQ_ORG\t' + '"' + varsSettings.issuer.organization + '"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_EMAIL\t' + '"' + varsSettings.email + '"';
+        setVar = 'set_var EASYRSA_REQ_EMAIL\t' + '"' + varsSettings.issuer.email + '"';
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_OU\t' + '"' + varsSettings.organizationalUnit + '"';
+        setVar = 'set_var EASYRSA_REQ_OU\t' + '"' + varsSettings.issuer.organizationalUnit + '"';
         fs.writeSync(fd, setVar + '\n');
         setVar = 'set_var EASYRSA_KEY_SIZE\t' + varsSettings.keySize;
         fs.writeSync(fd, setVar + '\n');
@@ -98,7 +162,7 @@ const writeToVarsFile = ( varsSettings, certificateRootPath, certificateLogPath 
         fs.writeSync(fd, setVar + '\n');
         setVar = 'set_var EASYRSA_CRL_DAYS\t' + varsSettings.crlDays;
         fs.writeSync(fd, setVar + '\n');
-        setVar = 'set_var EASYRSA_REQ_CN\t' + '"' + varsSettings.commonName + '"';
+        setVar = 'set_var EASYRSA_REQ_CN\t' + '"' + varsSettings.issuer.commonName + '"';
         fs.writeSync(fd, setVar + '\n');
         setVar = 'set_var EASYRSA_DIGEST\t' + '"' + varsSettings.digest + '"';
         fs.writeSync(fd, setVar + '\n');
@@ -155,7 +219,7 @@ const setupEasyRSA = ( varsSettings ) => {
     var cmd = '';
     var execResults = '';
 
-    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + varsSettings.commonName;  
+    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + varsSettings.issuer.commonName;  
     const certificateLogPath = certificateRootPath + '/easyrsa.log';
 
     try {
@@ -164,7 +228,7 @@ const setupEasyRSA = ( varsSettings ) => {
 
         // Copying esarsa file
         const easyrsaPath = certificateRootPath + '/easyrsa';
-        cmd = 'cp ' + process.env.EASYRSA_SRC_PATH + '/easyrsa ' + process.env.EASYRSA_ROOT_PATH + '/' + varsSettings.commonName + '/.'; 
+        cmd = 'cp ' + process.env.EASYRSA_SRC_PATH + '/easyrsa ' + process.env.EASYRSA_ROOT_PATH + '/' + varsSettings.issuer.commonName + '/.'; 
         if (!doFileExist( easyrsaPath )) {
             execResults = execSync(cmd);        
             log(cmd, certificateLogPath, execResults);
@@ -175,7 +239,7 @@ const setupEasyRSA = ( varsSettings ) => {
 
         // Copying configuration file
         const easyrsaConfigPath = certificateRootPath + '/openssl-easyrsa.cnf';
-        cmd = 'cp ' + process.env.EASYRSA_SRC_PATH + '/openssl-easyrsa.cnf ' + process.env.EASYRSA_ROOT_PATH  + '/' + varsSettings.commonName + '/.'; 
+        cmd = 'cp ' + process.env.EASYRSA_SRC_PATH + '/openssl-easyrsa.cnf ' + process.env.EASYRSA_ROOT_PATH  + '/' + varsSettings.issuer.commonName + '/.'; 
         if (!doFileExist( easyrsaConfigPath )) {
             execResults = execSync(cmd);
             log(cmd, certificateLogPath, execResults);
@@ -186,7 +250,7 @@ const setupEasyRSA = ( varsSettings ) => {
 
         // Copying x509-types directory
         const easyrsaX509TypesPath = certificateRootPath + '/x509-types';
-        cmd = 'cp -rf ' + process.env.EASYRSA_SRC_PATH + '/x509-types ' + process.env.EASYRSA_ROOT_PATH  + '/' + varsSettings.commonName + '/.'; 
+        cmd = 'cp -rf ' + process.env.EASYRSA_SRC_PATH + '/x509-types ' + process.env.EASYRSA_ROOT_PATH  + '/' + varsSettings.issuer.commonName + '/.'; 
         if (!doFileExist( easyrsaX509TypesPath )) {
             execResults = execSync(cmd);
             log(cmd, certificateLogPath, execResults);
@@ -222,5 +286,11 @@ const deleteEasyRSASetup = ( certificateRootPath ) => {
 module.exports = {
     setupEasyRSA,
     writeToVarsFile,
-    deleteEasyRSASetup
+    deleteEasyRSASetup,
+    initPKI,
+    generateCA,
+    generateDH,
+    generateServerCertificate,
+    generateTA,
+    generateClientCertificate
 };

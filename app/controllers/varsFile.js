@@ -1,19 +1,22 @@
 const Joi = require("joi");
 const { v4: uuid } = require("uuid");
 const { setupEasyRSA, writeToVarsFile, deleteEasyRSASetup }  = require("./shared");
+const Issuer  = require("../models/issuer");
 const VarsFile  = require("../models/varsFile");
 
 require("dotenv").config();
 
 // Validating review data from client
 const issuerSchema = Joi.object({
-  country: Joi.string().valid('CA', 'US').required(),
+  country: Joi.string().valid(Issuer.Countries.CA, Issuer.Countries.US).required(),
   province: Joi.string().required(), 
   city: Joi.string().required(), 
   organization: Joi.string().required(), 
   email: Joi.string().required(), 
   organizationalUnit: Joi.string().required(), 
   commonName: Joi.string().required(),
+  status: Joi.string().valid(Issuer.Statuses.Created_Vars, Issuer.Statuses.Generated_CA, Issuer.Statuses.Generated_DH, 
+    Issuer.Statuses.Generated_Server, Issuer.Statuses.Generated_Client).required(),
 });
 
 // Validating varsFile data from client
@@ -21,19 +24,32 @@ const varsFileSchema = Joi.object({
   id: Joi.string(),
   issuer: issuerSchema.required(),
   keySize: Joi.number(),
-  algorithm: Joi.string().valid("rsa", "ec").required(),
-  curve: Joi.string().valid("secp112r1", "secp112r2", "secp128r1", "secp128r2", "secp160k1", "secp160r1", "secp160r2", "secp192k1", "secp224k1",
-                            "secp224r1", "secp256k1", "secp384r1", "secp521r1", "prime192v1", "prime192v2", "prime192v3", "prime239v1", "prime239v2",
-                            "prime239v3", "prime256v1", "sect113r1", "sect113r2", "sect131r1", "sect131r2", "sect163k1", "sect163r1", "sect163r2",
-                            "sect193r1", "sect193r2", "sect233k1", "sect233r1", "sect239k1", "sect283k1", "sect283r1", "sect409k1", "sect409r1",
-                            "sect571k1", "sect571r1", "c2pnb163v1", "c2pnb163v2", "c2pnb163v3", "c2pnb176v1", "c2tnb191v1", "c2tnb191v2", "c2tnb191v3", 
-                            "c2pnb208w1", "c2tnb239v1", "c2tnb239v2", "c2tnb239v3", "c2pnb272w1", "c2pnb304w1", "c2tnb359v1", "c2pnb368w1", "c2tnb431r1", 
-                            "wap-wsg-idm-ecid-wtls1", "wap-wsg-idm-ecid-wtls3", "wap-wsg-idm-ecid-wtls4", "wap-wsg-idm-ecid-wtls5", "wap-wsg-idm-ecid-wtls6",
-                            "wap-wsg-idm-ecid-wtls7", "wap-wsg-idm-ecid-wtls8", "wap-wsg-idm-ecid-wtls9", "wap-wsg-idm-ecid-wtls10", "wap-wsg-idm-ecid-wtls11",
-                            "wap-wsg-idm-ecid-wtls12", "Oakley-EC2N-3", "Oakley-EC2N-4", "brainpoolP160r1", "brainpoolP160t1", "brainpoolP192r1", "brainpoolP192t1",
-                            "brainpoolP224r1", "brainpoolP224t1", "brainpoolP256r1", "brainpoolP256t1", "brainpoolP320r1", "brainpoolP320t1", "brainpoolP384r1",
-                            "brainpoolP384t1", "brainpoolP512r1", "brainpoolP512t1", "SM2").required(),
-  digest: Joi.string().valid("md5", "sha1", "sha256", "sha224", "sha384", "sha512").required(),
+  algorithm: Joi.string().valid(VarsFile.Algorithms.rsa, VarsFile.Algorithms.ec).required(),
+  curve: Joi.string().valid(VarsFile.Curves.secp112r1, VarsFile.Curves.secp112r2, VarsFile.Curves.secp128r1, VarsFile.Curves.secp128r2, 
+                            VarsFile.Curves.secp160k1, VarsFile.Curves.secp160r1, VarsFile.Curves.secp160r2, VarsFile.Curves.secp192k1, 
+                            VarsFile.Curves.secp224k1, VarsFile.Curves.secp224r1, VarsFile.Curves.secp256k1, VarsFile.Curves.secp384r1, 
+                            VarsFile.Curves.secp521r1, VarsFile.Curves.prime192v1, VarsFile.Curves.prime192v2, VarsFile.Curves.prime192v3, 
+                            VarsFile.Curves.prime239v1, VarsFile.Curves.prime239v2, VarsFile.Curves.prime239v3, VarsFile.Curves.prime256v1, 
+                            VarsFile.Curves.sect113r1, VarsFile.Curves.sect113r2, VarsFile.Curves.sect131r1, VarsFile.Curves.sect131r2, 
+                            VarsFile.Curves.sect163k1, VarsFile.Curves.sect163r1, VarsFile.Curves.sect163r2, VarsFile.Curves.sect193r1, 
+                            VarsFile.Curves.sect193r2, VarsFile.Curves.sect233k1, VarsFile.Curves.sect233r1, VarsFile.Curves.sect239k1, 
+                            VarsFile.Curves.sect283k1, VarsFile.Curves.sect283r1, VarsFile.Curves.sect409k1, VarsFile.Curves.sect409r1,
+                            VarsFile.Curves.sect571k1, VarsFile.Curves.sect571r1, VarsFile.Curves.c2pnb163v1, VarsFile.Curves.c2pnb163v2, 
+                            VarsFile.Curves.c2pnb163v3, VarsFile.Curves.c2pnb176v1, VarsFile.Curves.c2tnb191v1, VarsFile.Curves.c2tnb191v2, 
+                            VarsFile.Curves.c2tnb191v3, VarsFile.Curves.c2pnb208w1, VarsFile.Curves.c2tnb239v1, VarsFile.Curves.c2tnb239v2, 
+                            VarsFile.Curves.c2tnb239v3, VarsFile.Curves.c2pnb272w1, VarsFile.Curves.c2pnb304w1, VarsFile.Curves.c2tnb359v1, 
+                            VarsFile.Curves.c2pnb368w1, VarsFile.Curves.c2tnb431r1, VarsFile.Curves.wap_wsg_idm_ecid_wtls1, 
+                            VarsFile.Curves.wap_wsg_idm_ecid_wtls3, VarsFile.Curves.wap_wsg_idm_ecid_wtls4, VarsFile.Curves.wap_wsg_idm_ecid_wtls5, 
+                            VarsFile.Curves.wap_wsg_idm_ecid_wtls6, VarsFile.Curves.wap_wsg_idm_ecid_wtls7, VarsFile.Curves.wap_wsg_idm_ecid_wtls8, 
+                            VarsFile.Curves.wap_wsg_idm_ecid_wtls9, VarsFile.Curves.wap_wsg_idm_ecid_wtls10, VarsFile.Curves.wap_wsg_idm_ecid_wtls11,
+                            VarsFile.Curves.wap_wsg_idm_ecid_wtls12, VarsFile.Curves.Oakley_EC2N_3, VarsFile.Curves.Oakley_EC2N_4, 
+                            VarsFile.Curves.brainpoolP160r1, VarsFile.Curves.brainpoolP160t1, VarsFile.Curves.brainpoolP192r1, 
+                            VarsFile.Curves.brainpoolP192t1, VarsFile.Curves.brainpoolP224r1, VarsFile.Curves.brainpoolP224t1, 
+                            VarsFile.Curves.brainpoolP256r1, VarsFile.Curves.brainpoolP256t1, VarsFile.Curves.brainpoolP320r1, 
+                            VarsFile.Curves.brainpoolP320t1, VarsFile.Curves.brainpoolP384r1, VarsFile.Curves.brainpoolP384t1, 
+                            VarsFile.Curves.brainpoolP512r1, VarsFile.Curves.brainpoolP512t1, VarsFile.Curves.SM2).required(),
+  digest: Joi.string().valid(VarsFile.Digests.md5, VarsFile.Digests.sha1, VarsFile.Digests.sha224, VarsFile.Digests.sha256, VarsFile.Digests.sha384,
+                             VarsFile.Digests.sha512).required(),
   caExpire: Joi.number(),
   certExpire: Joi.number(),
   certRenewDays: Joi.number(),
@@ -48,7 +64,7 @@ module.exports.VarsFiles = async (req, res) => {
   try {
     const { userid } = req.decoded; // Passed by verifyJwt, a middleware 
 
-    // Retriving all reviews based on userid
+    // Retriving all vars files based on userid
     let varsFiles = await VarsFile.Model.find({ userId: userid }, { id: 1, issuer: 1, _id: 0 });
 
     if (!varsFiles) {
@@ -87,6 +103,7 @@ module.exports.Create = async (req, res) => {
       email: req.body.email, 
       organizationalUnit: req.body.organizationalUnit, 
       commonName: req.body.commonName,
+      status: Issuer.Statuses.Created_Vars,
     }
 
     // Checking validation of book cover image data
@@ -108,7 +125,7 @@ module.exports.Create = async (req, res) => {
       caExpire: req.body.caExpire,
       certExpire: req.body.certExpire,
       certRenewDays: req.body.certRenewDays,
-      crlDays: req.body.crlDays
+      crlDays: req.body.crlDays,
     }
 
     const result = varsFileSchema.validate(varsFile);
@@ -129,7 +146,7 @@ module.exports.Create = async (req, res) => {
     }
 
     // Setting up easy-rsa vars file
-    setupEasyRSA(result.value.issuer);
+    setupEasyRSA(result.value);
 
     const userid = req.decoded.userid; // Passed by verifyJwt, a middleware 
     const id = uuid(); // Generating unique id for the varsFile.
@@ -163,50 +180,51 @@ module.exports.Create = async (req, res) => {
  */
 module.exports.Update = async (req, res) => {
   try {
-      const issuer = {
-        country: req.body.country,
-        province: req.body.province, 
-        city: req.body.city, 
-        organization: req.body.organization, 
-        email: req.body.email, 
-        organizationalUnit: req.body.organizationalUnit, 
-        commonName: req.body.commonName,
-      }
-  
-      // Checking validation of book cover image data
-      const issuerResult = issuerSchema.validate(issuer);               
-      if (issuerResult.error) {
-        console.log(issuerResult.error.message);
-        return res.status(400).json({
-            error: true,
-            message: issuerResult.error.message,
-        });
-      }
-  
-      var varsFile = {
-        issuer: issuer,
-        keySize: req.body.keySize,
-        algorithm: req.body.algorithm,
-        curve: req.body.curve,
-        digest: req.body.digest,
-        caExpire: req.body.caExpire,
-        certExpire: req.body.certExpire,
-        certRenewDays: req.body.certRenewDays,
-        crlDays: req.body.crlDays
-      }
+    const issuer = {
+      country: req.body.country,
+      province: req.body.province, 
+      city: req.body.city, 
+      organization: req.body.organization, 
+      email: req.body.email, 
+      organizationalUnit: req.body.organizationalUnit, 
+      commonName: req.body.commonName,
+      status: req.body.status,
+    }
+
+    // Checking validation of book cover image data
+    const issuerResult = issuerSchema.validate(issuer);               
+    if (issuerResult.error) {
+      console.log(issuerResult.error.message);
+      return res.status(400).json({
+          error: true,
+          message: issuerResult.error.message,
+      });
+    }
+
+    var varsFile = {
+      id: req.body.id,
+      issuer: issuer,
+      keySize: req.body.keySize,
+      algorithm: req.body.algorithm,
+      curve: req.body.curve,
+      digest: req.body.digest,
+      caExpire: req.body.caExpire,
+      certExpire: req.body.certExpire,
+      certRenewDays: req.body.certRenewDays,
+      crlDays: req.body.crlDays,
+    }
   
     const result = varsFileSchema.validate(varsFile);
     if (result.error) {
         console.log(result.error.message);
-        return res.json({
+        return res.status(400).json({
             error: true,
-            status: 400,
             message: result.error.message,
         });
     }
 
     // updating easy-rsa settings in vars file 
-    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + result.value.commonName;  
+    const certificateRootPath = process.env.EASYRSA_ROOT_PATH + '/' + result.value.issuer.commonName;  
     const certificateLogPath = certificateRootPath + '/easyrsa.log';
     writeToVarsFile(result.value, certificateRootPath, certificateLogPath);
 
@@ -224,12 +242,7 @@ module.exports.Update = async (req, res) => {
 
     // Updating vars settings in DB 
     varsFile.userId = req.decoded.userid; // Passed by verifyJwt, a middleware 
-    varsFile.country = result.value.country;
-    varsFile.province =  result.value.province;
-    varsFile.city = result.value.city;
-    varsFile.organization = result.value.organization;
-    varsFile.email = result.value.email;
-    varsFile.organizationalUnit = result.value.organizationalUnit;
+    varsFile.issuer = result.value.issuer;
     varsFile.keySize = result.value.keySize;
     varsFile.algorithm = result.value.algorithm;
     varsFile.curve = result.value.curve;
@@ -337,11 +350,12 @@ module.exports.VarsFile = async (req, res) => {
 
     varsFile = { id: varsFile.id, country: varsFile.issuer.country, province: varsFile.issuer.province, city: varsFile.issuer.city, 
               organization: varsFile.issuer.organization, organizationalUnit: varsFile.issuer.organizationalUnit, email: varsFile.issuer.email, 
-              commonName: varsFile.issuer.commonName, keySize: varsFile.keySize, algorithm: varsFile.algorithm, curve: varsFile.curve, 
-              digest: varsFile.digest, caExpire: varsFile.caExpire, certExpire: varsFile.certExpire, certRenewDays: varsFile.certRenewDays, 
-              crlDays: varsFile.crlDays 
+              commonName: varsFile.issuer.commonName, status: varsFile.issuer.status, keySize: varsFile.keySize, algorithm: varsFile.algorithm, 
+              curve: varsFile.curve, digest: varsFile.digest, caExpire: varsFile.caExpire, certExpire: varsFile.certExpire, 
+              certRenewDays: varsFile.certRenewDays, crlDays: varsFile.crlDays, 
     };
-    
+
+     
     return res.status(200).json({
       success: true,
       varsFile,
