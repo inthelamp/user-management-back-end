@@ -11,7 +11,7 @@ module.exports.Issuers = async (req, res) => {
   try {
     const { userid } = req.decoded; // Passed by verifyJwt, a middleware 
     
-    // Retriving all reviews based on userid
+    // Retriving all issuers based on userid
     var issuers = await VarsFile.Model.find({ userId: userid }, { id: 1, issuer: 1, _id: 0 });
   
     if (!issuers) {

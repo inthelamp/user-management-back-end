@@ -96,15 +96,6 @@ const generateDH = ( certificateRootPath, certificateLogPath ) => {
     }
 }
 
-const generateServerCertificate = ( certificateRootPath, certificateLogPath ) => {
-    const cmd = "cd " + certificateRootPath + ";./easyrsa build-server-full server nopass";
-    try {
-        execCommand(certificateLogPath, cmd);
-    } catch (error) {
-        throw error;
-    }
-}
-
 const generateTA = ( certificateRootPath, certificateLogPath ) => {
     const cmd = "cd " + certificateRootPath + ";../src/openvpn --genkey --secret ./pki/ta.key";
     try {
@@ -114,8 +105,17 @@ const generateTA = ( certificateRootPath, certificateLogPath ) => {
     }
 }
 
-const generateClientCertificate = ( certificateRootPath, certificateLogPath ) => {
-    const cmd = "cd " + certificateRootPath + ";./easyrsa init-pki";
+const generateServerCertificate = ( certificateName, certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa build-server-full " + certificateName + " nopass";
+    try {
+        execCommand(certificateLogPath, cmd);
+    } catch (error) {
+        throw error;
+    }
+}
+
+const generateClientCertificate = ( certificateName, certificateRootPath, certificateLogPath ) => {
+    const cmd = "cd " + certificateRootPath + ";./easyrsa build-client-full " + certificateName + " nopass";
     try {
         execCommand(certificateLogPath, cmd);
     } catch (error) {

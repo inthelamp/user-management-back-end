@@ -9,21 +9,22 @@ const Schema = mongoose.Schema;
 const Categories = {
     CA: "CA", 
     Server: "Server", 
-    Clients: "Clients"
+    Client: "Client"
 };
 
 // Issuer schema
 const certificateSchema = new Schema(
   {
     id: { type: String, unique: true, required: true },
-    varsFileId: { type: String, required: true },
-    commonName: { type: String, unique: true, required: true },     //Its vars file common name is attached behind to create unique common name
+    commonName: { type: String, required: true },     //CA, client, or server's name to make fully qualified name in all
     category: {
         type: String,
         default: Categories.CA,
         enum: Categories,
         required: true
     },
+    varsFileId: { type: String, required: true },
+    deviceId: { type: String },
   },
   { timestamps: true }
 );

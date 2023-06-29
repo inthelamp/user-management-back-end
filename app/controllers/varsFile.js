@@ -3,10 +3,11 @@ const { v4: uuid } = require("uuid");
 const { setupEasyRSA, writeToVarsFile, deleteEasyRSASetup }  = require("./shared");
 const Issuer  = require("../models/issuer");
 const VarsFile  = require("../models/varsFile");
+const Certificate  = require("../models/certificate");
 
 require("dotenv").config();
 
-// Validating review data from client
+// Validating issuer data from client
 const issuerSchema = Joi.object({
   country: Joi.string().valid(Issuer.Countries.CA, Issuer.Countries.US).required(),
   province: Joi.string().required(), 
@@ -106,7 +107,7 @@ module.exports.Create = async (req, res) => {
       status: Issuer.Statuses.Created_Vars,
     }
 
-    // Checking validation of book cover image data
+    // Checking validation of issuer data
     const issuerResult = issuerSchema.validate(issuer);               
     if (issuerResult.error) {
       console.log(issuerResult.error.message);
@@ -307,12 +308,27 @@ module.exports.Update = async (req, res) => {
           message: err.message,
         });
       } else {
+
+        // Checking if there are certificates related to the var file
+        let certificates = Certificate.Model.find({varsFileId : id});
+
+        if (certificates) {
+          certificates.deleteMany(function(err) {
+            if (err) {
+              return res.status(500).json({
+                error: true,
+                message: err.message,
+              });
+            } 
+          });
+        }
         return res.status(200).json({
           success: true,
           message: "Vars file is successfully deleted.",
         });
       }
     });
+
   } catch (error) {
     console.error("Deleting vars file error", error);
 
